@@ -21,46 +21,62 @@ func NewServer() *Server {
 	return server
 }
 
+type ServerReply struct {
+	httpCode int
+	body string
+	contentType string
+}
+
+func NewServerReply() *ServerReply {
+	reply := new(ServerReply)
+	reply.httpCode = http.StatusOK
+	reply.contentType = "text/plain; charset=utf-8;"
+	reply.body = ""
+	return reply
+}
+
 func (server *Server) Start(addr string) (ok bool, err error) {
 	handler := NewHandler(server)
-	err = http.ListenAndServe("127.0.0.1:8080", handler)
-	if err != nil {
-		ok = false
-	} else {
+	err = http.ListenAndServe(addr, handler)
+	if err == nil {
 		ok = true
-	}
-	return
-}
-
-func runCommand(gardener Gardener, rawCall []string) (reply string, err error) {
-	if rawCall[0] == "cmd" {
-		if rawCall[1] == "spawn" {
-			if len(rawCall) > 3 && rawCall[3] != "" {
-				reply, err = gardener.Spawn(rawCall[2], rawCall[3], rawCall[4:len(rawCall)])
-			} else {
-				reply = "can not spawn ..."
-			}
-		} else if rawCall[1] == "kill" {
-			reply, err = gardener.Kill(rawCall[2])
-		} else if rawCall[1] == "restart" {
-			reply = "restart"
-		} else {
-			reply = "wtf is that command"
-		}
-	} else if rawCall[0] == "status" {
-		reply, err = gardener.Status()
 	} else {
-		reply = "wtf"
+		ok = false
 	}
 	return
 }
 
-func (server *Server) Execute(rawCall []string) (reply string, statusCode int) {
-	reply = ""
-	statusCode = http.StatusOK
+func runCommand(gardener Gardener, rawCall []string) (reply *ServerReply, err error) {
+	reply = NewServerReply();
+	reply.httpCode = 404;
+	reply.body = "supported commands: \n  /status\n  /cmd/spawn/name/cmdFile/arg/arg/...\n  /cmd/kill/name\n"
+	if len(rawCall) > 0 {
+		if rawCall[0] == "cmd" {
+			if rawCall[1] == "spawn" {
+				if len(rawCall) > 3 && rawCall[3] != "" {
+					reply, err = gardener.Spawn(rawCall[2], rawCall[3], rawCall[4:len(rawCall)])
+				} else {
+					reply.body = "can not spawn ..."
+				}
+			} else if rawCall[1] == "kill" {
+				reply, err = gardener.Kill(rawCall[2])
+			} else if rawCall[1] == "restart" {
+				reply.body = "restart"
+			} else {
+				reply.body = "wtf is that command"
+			}
+		} else if rawCall[0] == "status" {
+			reply, err = gardener.Status()
+		}
+	}
+	return
+}
+
+func (server *Server) Execute(rawCall []string) (reply *ServerReply) {
 	reply, err := runCommand(server.garden, rawCall)
 	if err != nil {
-		statusCode = http.StatusInternalServerError
+		reply.httpCode = http.StatusInternalServerError
+		reply.body = "oh body that did not work"
 	}
 	return
 }

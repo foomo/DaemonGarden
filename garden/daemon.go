@@ -1,7 +1,6 @@
 package garden
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -32,7 +31,7 @@ func NewDaemon(name string, cmdFile string, args []string) *Daemon {
 	daemon.Name = name
 	daemon.cmdFile = cmdFile
 	daemon.args = args
-	daemon.logDir = logDir
+	daemon.logDir = LogDir
 	return daemon
 }
 
@@ -51,12 +50,12 @@ func (daemon *Daemon) wireStreams() (err error) {
 		return
 	}
 
-	fileErr, err := getFileToAppend(logDir + "/" + daemon.Name + ".errors")
+	fileErr, err := getFileToAppend(LogDir + "/" + daemon.Name + ".errors")
 	if err != nil {
 		return
 	}
 
-	fileOut, err := getFileToAppend(logDir + "/" + daemon.Name + ".log")
+	fileOut, err := getFileToAppend(LogDir + "/" + daemon.Name + ".log")
 	if err != nil {
 		fileErr.Close()
 		return
@@ -76,7 +75,6 @@ func (daemon *Daemon) Spawn() (err error) {
 	err = daemon.wireStreams()
 	if err == nil {
 		err = daemon.command.Start()
-		fmt.Println("process started")
 		go func() {
 			daemonState, waitErr := daemon.command.Process.Wait()
 			if waitErr == nil {

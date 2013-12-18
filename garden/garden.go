@@ -3,15 +3,15 @@ package garden
 import (
 	"encoding/json"
 	"errors"
-	// "fmt"
+	"log"
 )
 
-var logDir string = "/var/log/daemonGarden"
+var LogDir string = ""
 
 type Gardener interface {
-	Spawn(name string, cmdFile string, arguments []string) (reply string, err error)
-	Kill(name string) (reply string, err error)
-	Status() (reply string, err error)
+	Spawn(name string, cmdFile string, arguments []string) (reply *ServerReply, err error)
+	Kill(name string) (reply *ServerReply, err error)
+	Status() (reply *ServerReply, err error)
 }
 
 type Garden struct {
@@ -31,13 +31,18 @@ func (garden *Garden) removeDaemon(daemon *Daemon) {
 	delete(garden.daemons, daemon.Name)
 }
 
-func (garden *Garden) Spawn(name string, cmdFile string, args []string) (reply string, err error) {
+func (garden *Garden) Spawn(name string, cmdFile string, args []string) (reply *ServerReply, err error) {
+	reply = NewServerReply()
+	log.Println("garden.Spawn", name, cmdFile, args)
 	if runningDaemon, ok := garden.daemons[name]; ok {
+		log.Println("  oh, there already is a daemon with that name")
 		if runningDaemon.state == nil {
-			reply = "process is already running"
-			err = errors.New(reply)
+			reply.body = "process is already running"
+			log.Println("    denying Spawn there already is a running daemon")
+			err = errors.New(reply.body)
 			return
 		} else {
+			log.Println("    looks like that is a dead one - removing it")
 			garden.removeDaemon(runningDaemon)
 		}
 	}
@@ -45,29 +50,38 @@ func (garden *Garden) Spawn(name string, cmdFile string, args []string) (reply s
 	err = daemon.Spawn()
 	if err == nil {
 		garden.daemons[name] = daemon
-		reply = "daemon spawned"
+		reply.body = "daemon spawned"
 	} else {
-		reply = "could not spawn deamon " + err.Error()
+		reply.body = "could not spawn deamon " + err.Error()
 	}
+	log.Println("  " + reply.body)
 	return
 }
 
-func (garden *Garden) Status() (reply string, err error) {
+func (garden *Garden) Status() (reply *ServerReply, err error) {
+	reply = NewServerReply()
 	statusMap := make(map[string]*DaemonStatus)
 	for name, daemon := range garden.daemons {
 		statusMap[name] = daemon.Status()
 	}
-	reply, err = toJSON(statusMap)
+	reply.contentType = "application/json"
+	reply.body, err = toJSON(statusMap)
+	log.Println("garden.Status")
+	log.Print(reply.body)
+	log.Println("  end of garden.Status")
 	return
 }
 
-func (garden *Garden) Kill(name string) (reply string, err error) {
+func (garden *Garden) Kill(name string) (reply *ServerReply, err error) {
+	reply = NewServerReply()
+	log.Println("garden.Kill", name)
 	if daemon, ok := garden.daemons[name]; ok {
 		garden.removeDaemon(daemon)
-		reply = "killed " + name
+		reply.body = "killed " + name
 	} else {
-		reply = "daemon not found"
+		reply.body = "daemon not found"
 	}
+	log.Println("  " + reply.body)
 	return
 }
 

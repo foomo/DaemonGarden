@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"fmt"
 )
 
 type CallExecuter interface {
-	Execute(rawCall []string) (reply string, statusCode int)
+	Execute(rawCall []string) (reply *ServerReply)
 }
 
 type Handler struct {
@@ -43,8 +44,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("url decoding error"))
 		return
 	} else {
-		reply, statusCode := h.callExecuter.Execute(decoded)
-		w.WriteHeader(statusCode)
-		w.Write([]byte(reply))
+		reply := h.callExecuter.Execute(decoded)
+		fmt.Println(reply)
+		w.Header().Set("Content-Type", reply.contentType)		
+		w.WriteHeader(reply.httpCode)
+		w.Write([]byte(reply.body))
 	}
 }
