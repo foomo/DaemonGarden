@@ -2,11 +2,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/foomo/DaemonGarden/garden"
 	"log"
 	"os"
 )
 
+var uniqushPushVersion = "daemon-garden 1.0.0"
+
+var showVersionFlag = flag.Bool("version", false, "Version info")
 var address = flag.String("address", "127.0.0.1:8081", "address to bind host:port")
 var logDir = flag.String("logDir", "/var/log/daemonGarden", "directory to put my daemon logs to")
 
@@ -30,6 +34,11 @@ func validateLogDir(logDir string) (logFile *os.File) {
 
 func main() {
 	flag.Parse()
+
+	if *showVersionFlag {
+		fmt.Printf("%v\n", uniqushPushVersion)
+		return
+	}
 
 	garden.LogDir = *logDir
 
