@@ -57,6 +57,7 @@ package()
 	rm $LICENSE
 }
 
+package linux amd64 deb foomo/daemon-garden/ubuntu/precise
 package linux amd64 deb foomo/daemon-garden/ubuntu/trusty
 
 #package linux amd64 rpm
